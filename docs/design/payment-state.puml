@@ -1,0 +1,34 @@
+@startuml
+hide empty description
+
+[*] --> Initiated : payment created
+
+Initiated --> FundsHeld : fraud checks pass &\nwallet has enough funds
+Initiated --> Rejected : fraud check fails or\ninsufficient funds
+
+FundsHeld --> SentToBiller : request sent to biller
+
+SentToBiller --> Completed : biller confirms
+SentToBiller --> Failed : biller refuses
+SentToBiller --> Unknown : no answer within\ntimeout
+
+Unknown --> Completed : biller later confirms\n(callback, retry or\nsettlement file)
+Unknown --> Failed : biller later refuses, or\nreconciliation finds\nno payment
+
+Failed --> Refunded : hold released to\nthe wallet
+
+Completed --> [*]
+Rejected --> [*]
+Refunded --> [*]
+
+note right of Unknown
+  Never refunded automatically;
+  money returns only after confirming
+  biller did not receive it.
+end note
+
+note right of Completed
+  Completed, Rejected, and
+  Refunded are final states.
+end note
+@enduml

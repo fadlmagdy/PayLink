@@ -1,0 +1,33 @@
+@startuml
+title PayLink - Biller Use Case Diagram
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor Biller
+
+rectangle "PayLink System" {
+  usecase "Receive Bill Inquiry" as UC_Inquiry
+  usecase "Return Bill Information" as UC_BillInfo
+  usecase "Receive Payment Request" as UC_PaymentRequest
+  usecase "Process Bill Payment" as UC_ProcessPayment
+  usecase "Return Payment Result" as UC_Result
+  usecase "Send Asynchronous Callback" as UC_Callback
+  usecase "Update Payment Status" as UC_Status
+  usecase "Participate in Reconciliation" as UC_Reconcile
+}
+
+Biller --> UC_Inquiry
+Biller --> UC_BillInfo
+Biller --> UC_PaymentRequest
+Biller --> UC_ProcessPayment
+Biller --> UC_Result
+Biller --> UC_Callback
+Biller --> UC_Reconcile
+
+UC_Inquiry .> UC_BillInfo : <<include>>
+UC_PaymentRequest .> UC_ProcessPayment : <<include>>
+UC_ProcessPayment .> UC_Result : <<include>>
+UC_Callback .> UC_Status : <<include>>
+
+@enduml

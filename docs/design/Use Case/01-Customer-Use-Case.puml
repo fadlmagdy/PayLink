@@ -1,0 +1,52 @@
+@startuml
+title PayLink - Customer Use Case Diagram
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor Customer
+actor "Notification Provider" as NotificationProvider
+
+rectangle "PayLink System" {
+  usecase "Register Account" as UC_Register
+  usecase "Upgrade Verification Level" as UC_Upgrade
+  usecase "View Wallet Balance" as UC_ViewBalance
+  usecase "View Transaction History" as UC_History
+  usecase "Top Up Wallet" as UC_TopUp
+  usecase "View Available Billers" as UC_Billers
+  usecase "View Required Fields" as UC_Fields
+  usecase "Run Bill Inquiry" as UC_Inquiry
+  usecase "Pay Bill" as UC_Pay
+  usecase "Calculate Service Fee" as UC_Fee
+  usecase "Check Idempotency Key" as UC_Idempotency
+  usecase "Run Fraud and Limit Checks" as UC_Fraud
+  usecase "Hold Wallet Funds" as UC_Hold
+  usecase "Send Payment to Biller" as UC_Send
+  usecase "Update Payment Status" as UC_Status
+  usecase "Record Ledger Entry" as UC_Ledger
+  usecase "Send Payment Notification" as UC_Notify
+  usecase "Request Refund" as UC_Refund
+}
+
+Customer --> UC_Register
+Customer --> UC_Upgrade
+Customer --> UC_ViewBalance
+Customer --> UC_History
+Customer --> UC_TopUp
+Customer --> UC_Billers
+Customer --> UC_Fields
+Customer --> UC_Inquiry
+Customer --> UC_Pay
+Customer --> UC_Refund
+
+UC_Pay .> UC_Fee : <<include>>
+UC_Pay .> UC_Idempotency : <<include>>
+UC_Pay .> UC_Fraud : <<include>>
+UC_Pay .> UC_Hold : <<include>>
+UC_Pay .> UC_Send : <<include>>
+UC_Pay .> UC_Status : <<include>>
+UC_Pay .> UC_Ledger : <<include>>
+UC_Status .> UC_Notify : <<extend>>
+NotificationProvider --> UC_Notify
+
+@enduml

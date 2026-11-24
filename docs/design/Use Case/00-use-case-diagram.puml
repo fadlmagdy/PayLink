@@ -1,0 +1,103 @@
+@startuml
+title PayLink - Use Case Diagram
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor Customer
+actor Agent
+actor Admin
+actor "Support Employee" as Support
+actor Biller
+actor "Notification Provider" as NotificationProvider
+
+rectangle "PayLink System" {
+  usecase "Register Account" as UC_Register
+  usecase "Upgrade Verification Level" as UC_Upgrade
+  usecase "View Wallet Balance\nand Transaction History" as UC_ViewWallet
+  usecase "Top Up Wallet" as UC_TopUp
+  usecase "View Available Billers\nand Required Fields" as UC_ViewBillers
+  usecase "Run Bill Inquiry" as UC_Inquiry
+  usecase "Calculate Service Fee" as UC_Fee
+  usecase "Pay Bill" as UC_Pay
+  usecase "Check Idempotency Key" as UC_Idempotency
+  usecase "Run Fraud and Limit Checks" as UC_Fraud
+  usecase "Hold Wallet Funds" as UC_Hold
+  usecase "Send Payment to Biller" as UC_Send
+  usecase "Update Payment Status" as UC_Status
+  usecase "Release Held Funds" as UC_Release
+  usecase "Record Ledger Entry" as UC_Ledger
+  usecase "Receive Biller Callback" as UC_Callback
+  usecase "Send Payment Notification" as UC_Notify
+  usecase "Retry Failed Notification" as UC_RetryNotify
+  usecase "Pay on Behalf of Customer" as UC_AgentPay
+  usecase "Calculate Agent Commission" as UC_Commission
+  usecase "Manage Billers and Services" as UC_ManageBillers
+  usecase "Update Fees and Limits" as UC_Config
+  usecase "Search Payment by Reference\nand View History" as UC_Search
+  usecase "Block / Unblock Account" as UC_Block
+  usecase "Maintain Audit Log" as UC_Audit
+  usecase "Generate Reconciliation Report" as UC_Reconcile
+  usecase "Request Refund" as UC_RefundRequest
+  usecase "Approve Refund Request" as UC_ApproveRefund
+  usecase "Process Refund" as UC_Refund
+  usecase "View Daily Payment Statistics" as UC_Stats
+}
+
+Customer --> UC_Register
+Customer --> UC_Upgrade
+Customer --> UC_ViewWallet
+Customer --> UC_TopUp
+Customer --> UC_ViewBillers
+Customer --> UC_Inquiry
+Customer --> UC_Pay
+Customer --> UC_RefundRequest
+
+Agent --> UC_AgentPay
+Agent --> UC_TopUp
+UC_AgentPay .> UC_Pay : <<include>>
+UC_AgentPay .> UC_Commission : <<include>>
+
+Admin --> UC_ManageBillers
+Admin --> UC_Config
+Admin --> UC_Stats
+
+Support --> UC_Search
+Support --> UC_Block
+Support --> UC_ApproveRefund
+Support --> UC_Reconcile
+UC_ApproveRefund .> UC_Refund : <<include>>
+
+Biller --> UC_Inquiry
+Biller --> UC_Send
+Biller --> UC_Callback
+Biller --> UC_Reconcile
+
+NotificationProvider --> UC_Notify
+
+UC_Inquiry .> UC_Fee : <<include>>
+UC_Pay .> UC_Idempotency : <<include>>
+UC_Pay .> UC_Fraud : <<include>>
+UC_Pay .> UC_Hold : <<include>>
+UC_Pay .> UC_Send : <<include>>
+UC_Pay .> UC_Status : <<include>>
+UC_Pay .> UC_Ledger : <<include>>
+UC_Pay .> UC_Audit : <<include>>
+UC_Status .> UC_Notify : <<extend>>
+UC_Send .> UC_Release : <<extend>>
+UC_Notify .> UC_RetryNotify : <<extend>>
+UC_Callback .> UC_Status : <<include>>
+UC_Refund .> UC_Ledger : <<include>>
+UC_Refund .> UC_Audit : <<include>>
+UC_ManageBillers .> UC_Audit : <<include>>
+UC_Config .> UC_Audit : <<include>>
+UC_Block .> UC_Audit : <<include>>
+UC_Reconcile .> UC_Audit : <<include>>
+
+note right of UC_Pay
+  Funds are held before the biller is called.
+  A timeout changes the payment to Unknown;
+  held funds must not be released until the
+  biller is confirmed not to have received payment.
+end note
+@enduml

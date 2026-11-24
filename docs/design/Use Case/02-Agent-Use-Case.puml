@@ -1,0 +1,36 @@
+@startuml
+title PayLink - Agent Use Case Diagram
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor Agent
+
+rectangle "PayLink System" {
+  usecase "Pay on Behalf of Customer" as UC_AgentPay
+  usecase "Top Up Customer Wallet" as UC_TopUp
+  usecase "Pay Bill" as UC_Pay
+  usecase "Calculate Service Fee" as UC_Fee
+  usecase "Check Idempotency Key" as UC_Idempotency
+  usecase "Run Fraud and Limit Checks" as UC_Fraud
+  usecase "Hold Wallet Funds" as UC_Hold
+  usecase "Send Payment to Biller" as UC_Send
+  usecase "Update Payment Status" as UC_Status
+  usecase "Record Ledger Entry" as UC_Ledger
+  usecase "Calculate Agent Commission" as UC_Commission
+}
+
+Agent --> UC_AgentPay
+Agent --> UC_TopUp
+
+UC_AgentPay .> UC_Pay : <<include>>
+UC_AgentPay .> UC_Commission : <<include>>
+UC_Pay .> UC_Fee : <<include>>
+UC_Pay .> UC_Idempotency : <<include>>
+UC_Pay .> UC_Fraud : <<include>>
+UC_Pay .> UC_Hold : <<include>>
+UC_Pay .> UC_Send : <<include>>
+UC_Pay .> UC_Status : <<include>>
+UC_Pay .> UC_Ledger : <<include>>
+
+@enduml

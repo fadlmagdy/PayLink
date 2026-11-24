@@ -1,0 +1,26 @@
+@startuml
+title PayLink - Admin Use Case Diagram
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor Admin
+
+rectangle "PayLink System" {
+  usecase "Manage Billers" as UC_Billers
+  usecase "Manage Biller Services" as UC_Services
+  usecase "Update Fees and Limits" as UC_Config
+  usecase "View Daily Payment Statistics" as UC_Stats
+  usecase "Maintain Audit Log" as UC_Audit
+}
+
+Admin --> UC_Billers
+Admin --> UC_Services
+Admin --> UC_Config
+Admin --> UC_Stats
+
+UC_Billers .> UC_Audit : <<include>>
+UC_Services .> UC_Audit : <<include>>
+UC_Config .> UC_Audit : <<include>>
+
+@enduml

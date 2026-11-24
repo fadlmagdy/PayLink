@@ -1,0 +1,157 @@
+@startuml
+skinparam linetype ortho
+hide circle
+
+entity "users" as users {
+  * user_id : UUID <<PK>>
+  --
+  * full_name : VARCHAR
+  * email : VARCHAR <<UK>>
+  * phone : VARCHAR <<UK>>
+  * role : VARCHAR
+  * verification_level : VARCHAR
+  * status : VARCHAR
+  * blocked_until : TIMESTAMP
+  * created_at : TIMESTAMP
+}
+
+entity "wallets" as wallets {
+  * wallet_id : UUID <<PK>>
+  --
+  * user_id : UUID <<FK>>
+  * currency : VARCHAR
+  * created_at : TIMESTAMP
+}
+
+entity "ledger_entries" as ledger_entries {
+  * entry_id : UUID <<PK>>
+  --
+  * wallet_id : UUID <<FK>>
+  * payment_id : UUID <<FK>>
+  * entry_type : VARCHAR
+  * amount : DECIMAL(12,2)
+  * reason : VARCHAR
+  * created_at : TIMESTAMP
+}
+
+entity "wallet_holds" as wallet_holds {
+  * hold_id : UUID <<PK>>
+  --
+  * wallet_id : UUID <<FK>>
+  * payment_id : UUID <<FK>>
+  * amount : DECIMAL(12,2)
+  * status : VARCHAR
+  * created_at : TIMESTAMP
+  * released_at : TIMESTAMP
+}
+
+entity "billers" as billers {
+  * biller_id : UUID <<PK>>
+  --
+  * name : VARCHAR <<UK>>
+  * protocol_type : VARCHAR
+  * is_active : BOOLEAN
+  * promo_start_at : TIMESTAMP
+  * promo_end_at : TIMESTAMP
+  * created_at : TIMESTAMP
+}
+
+entity "biller_services" as biller_services {
+  * service_id : UUID <<PK>>
+  --
+  * biller_id : UUID <<FK>>
+  * name : VARCHAR
+  * required_fields_json : JSON
+  * min_amount : DECIMAL(12,2)
+  * max_amount : DECIMAL(12,2)
+  * fee_type : VARCHAR
+  * fee_value : DECIMAL(12,2)
+  * is_active : BOOLEAN
+}
+
+entity "payments" as payments {
+  * payment_id : UUID <<PK>>
+  --
+  * reference_number : VARCHAR <<UK>>
+  * idempotency_key : VARCHAR <<UK>>
+  * customer_id : UUID <<FK>>
+  * agent_id : UUID <<FK>>
+  * service_id : UUID <<FK>>
+  * bill_amount : DECIMAL(12,2)
+  * fee_amount : DECIMAL(12,2)
+  * total_amount : DECIMAL(12,2)
+  * commission_amount : DECIMAL(12,2)
+  * status : VARCHAR
+  * failure_reason : VARCHAR
+  * retry_count : INT
+  * next_retry_at : TIMESTAMP
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+}
+
+entity "notifications" as notifications {
+  * notification_id : UUID <<PK>>
+  --
+  * payment_id : UUID <<FK>>
+  * user_id : UUID <<FK>>
+  * channel : VARCHAR
+  * recipient : VARCHAR
+  * status : VARCHAR
+  * retry_count : INT
+  * last_error : VARCHAR
+  * created_at : TIMESTAMP
+}
+
+entity "reconciliation_reports" as reconciliation_reports {
+  * report_id : UUID <<PK>>
+  --
+  * biller_id : UUID <<FK>>
+  * settlement_date : DATE
+  * status : VARCHAR
+  * generated_at : TIMESTAMP
+}
+
+entity "reconciliation_items" as reconciliation_items {
+  * item_id : UUID <<PK>>
+  --
+  * report_id : UUID <<FK>>
+  * payment_id : UUID <<FK>>
+  * reference_number : VARCHAR
+  * discrepancy_type : VARCHAR
+  * biller_amount : DECIMAL(12,2)
+  * paylink_amount : DECIMAL(12,2)
+}
+
+entity "audit_logs" as audit_logs {
+  * audit_id : UUID <<PK>>
+  --
+  * actor_id : UUID <<FK>>
+  * action : VARCHAR
+  * entity_type : VARCHAR
+  * entity_id : VARCHAR
+  * reason : VARCHAR
+  * metadata_json : JSON
+  * created_at : TIMESTAMP
+}
+
+users ||--o{ wallets : "owns"
+wallets ||--o{ ledger_entries : "records"
+wallets ||--o{ wallet_holds : "reserves"
+
+billers ||--o{ biller_services : "offers"
+biller_services ||--o{ payments : "billed via"
+
+users ||--o{ payments : "pays as customer"
+users ||--o{ payments : "processes as agent"
+payments ||--o{ ledger_entries : "generates"
+payments ||--o{ wallet_holds : "places"
+
+payments ||--o{ notifications : "triggers"
+users ||--o{ notifications : "receives"
+
+billers ||--o{ reconciliation_reports : "settles"
+reconciliation_reports ||--o{ reconciliation_items : "contains"
+payments ||--o{ reconciliation_items : "matched in"
+
+users ||--o{ audit_logs : "performs"
+@enduml

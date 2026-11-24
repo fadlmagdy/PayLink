@@ -1,0 +1,104 @@
+@startuml
+title PayLink - Sequence Diagram: Pay a Bill
+autonumber
+skinparam shadowing false
+
+actor Customer
+participant "PayLink API" as API
+participant "Payment Processing" as Payment
+participant "Idempotency Service" as Idempotency
+participant "Fraud Checks" as Fraud
+participant "Fees and Commissions" as Fees
+participant "Accounts and Wallet" as Wallet
+participant "Biller Integration\n(Adapter)" as Adapter
+participant "External Biller" as Biller
+participant "Notification Service" as Notifications
+participant "SMS / Push Provider" as Provider
+
+note over Customer,API
+  Precondition: customer is authenticated and has completed
+  a bill inquiry. The inquiry contains the bill amount and
+  calculated service fee shown to the customer.
+end note
+
+Customer -> API: Confirm payment(inquiryId, idempotencyKey)
+API -> Payment: pay(customerId, inquiryId, idempotencyKey)
+Payment -> Idempotency: findByKey(idempotencyKey)
+
+alt Duplicate request
+  Idempotency --> Payment: Existing payment/result
+  Payment --> API: Return original payment result
+  API --> Customer: Show original result
+else New request
+  Idempotency --> Payment: Key not used
+  Payment -> Payment: Create payment (Initiated)
+  Payment -> Fees: Get confirmed fee and total
+  Fees --> Payment: serviceFee, totalAmount
+
+  Payment -> Fraud: Check account status, daily limit,\nand payment velocity
+  alt Fraud check fails or account blocked
+    Fraud --> Payment: Rejected(reason)
+    Payment -> Payment: Set status = Rejected
+    Payment --> API: Payment rejected(reason)
+    API --> Customer: Display rejection reason
+  else Fraud checks pass
+    Fraud --> Payment: Approved
+    Payment -> Wallet: Hold totalAmount atomically
+    alt Insufficient available balance
+      Wallet --> Payment: Hold failed
+      Payment -> Payment: Set status = Rejected
+      Payment --> API: Insufficient funds
+      API --> Customer: Display insufficient balance
+    else Funds successfully held
+      Wallet -> Wallet: Create Hold ledger entry
+      Wallet --> Payment: Hold successful
+      Payment -> Payment: Set status = FundsHeld
+      Payment -> Adapter: submitPayment(biller, bill details,\npaymentReference)
+      Payment -> Payment: Set status = SentToBiller
+      Adapter -> Biller: Payment request
+      alt Biller confirms payment
+        Biller --> Adapter: Success + biller reference
+        Adapter --> Payment: Payment confirmed
+        Payment -> Payment: Set status = Completed
+        Payment -> Wallet: Capture held amount and record ledger entries
+        Wallet --> Payment: Capture recorded
+        Payment -> Fees: Calculate agent commission (if agent involved)
+        Fees --> Payment: Commission amount / none
+        opt Agent was involved
+          Payment -> Wallet: Credit agent commission
+          Wallet --> Payment: Commission ledger entry created
+        end
+        Payment -> Notifications: Send completion receipt
+        Notifications -> Provider: SMS and push notification
+        Provider --> Notifications: Delivery result
+        Notifications --> Payment: Notification queued/sent
+        Payment --> API: Completed + receipt details
+        API --> Customer: Display payment success
+      else Biller refuses payment
+        Biller --> Adapter: Failure + reason
+        Adapter --> Payment: Payment refused(reason)
+        Payment -> Payment: Set status = Failed
+        Payment -> Wallet: Release held funds
+        Wallet -> Wallet: Create Release ledger entry
+        Wallet --> Payment: Funds released
+        Payment -> Notifications: Send failure notification
+        Notifications -> Provider: SMS and push notification
+        Provider --> Notifications: Delivery result
+        Notifications --> Payment: Notification queued/sent
+        Payment --> API: Failed + reason
+        API --> Customer: Display failure reason
+      else Biller does not respond within 10 seconds
+        Adapter --> Payment: Timeout
+        Payment -> Payment: Set status = Unknown
+        note over Payment,Wallet
+          Keep the funds held. Do not refund automatically
+          while the biller result is unknown.
+        end note
+        Payment --> API: Processing / Unknown
+        API --> Customer: Show payment is still processing
+      end
+    end
+  end
+end
+
+@enduml

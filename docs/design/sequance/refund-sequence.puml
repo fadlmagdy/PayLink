@@ -1,0 +1,28 @@
+@startuml
+autonumber
+actor Customer
+actor Support
+participant "Payment Service" as PaymentSvc
+participant "Wallet & Ledger Service" as WalletSvc
+participant "Notification Service" as NotifSvc
+
+== Automatic Release on Biller Refusal ==
+PaymentSvc -> WalletSvc : releaseHold(paymentId, amount)
+WalletSvc -> WalletSvc : createLedgerEntry(RELEASE_HOLD, amount)
+WalletSvc --> PaymentSvc : holdReleased
+
+PaymentSvc -> NotifSvc : sendPaymentFailedNotification(customerId, paymentId, reason)
+NotifSvc --> Customer : SMS & Push Notification (Failed + Reason)
+
+== Optional Support-Approved Refund of Completed Payment ==
+Customer -> PaymentSvc : requestRefund(paymentId, reason)
+PaymentSvc --> Support : refundRequestPendingApproval
+
+Support -> PaymentSvc : approveRefund(refundRequestId)
+PaymentSvc -> WalletSvc : refundPayment(paymentId, amount)
+WalletSvc -> WalletSvc : createLedgerEntry(REFUND, +amount)
+WalletSvc --> PaymentSvc : refundCompleted
+
+PaymentSvc -> NotifSvc : sendRefundNotification(customerId, paymentId, amount)
+NotifSvc --> Customer : SMS & Push Notification (Refunded)
+@enduml

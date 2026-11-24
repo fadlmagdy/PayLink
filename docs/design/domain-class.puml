@@ -1,0 +1,228 @@
+@startuml
+title PayLink - Domain Class Diagram
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+hide empty methods
+
+abstract class User {
+  +userId: UUID
+  +fullName: String
+  +email: String
+  +phoneNumber: String
+  +accountStatus: AccountStatus
+}
+
+class Customer {
+  +verificationLevel: VerificationLevel
+}
+
+class Agent {
+  +agentCode: String
+}
+
+class Admin {
+}
+
+class SupportEmployee {
+}
+
+class Wallet {
+  +walletId: UUID
+  +currency: String
+  +getAvailableBalance(): Decimal
+  +getHeldBalance(): Decimal
+}
+
+class LedgerEntry {
+  +entryId: UUID
+  +entryType: LedgerEntryType
+  +amount: Decimal
+  +createdAt: DateTime
+  +description: String
+  +reference: String
+}
+
+class Payment {
+  +paymentId: UUID
+  +paymentReference: String
+  +idempotencyKey: String
+  +billAmount: Decimal
+  +serviceFee: Decimal
+  +totalAmount: Decimal
+  +status: PaymentStatus
+  +createdAt: DateTime
+  +updatedAt: DateTime
+}
+
+class BillInquiry {
+  +inquiryId: UUID
+  +customerInput: String
+  +billAmount: Decimal
+  +inquiredAt: DateTime
+  +expiresAt: DateTime
+}
+
+class Biller {
+  +billerId: UUID
+  +name: String
+  +protocol: String
+  +isActive: Boolean
+}
+
+class BillerService {
+  +serviceId: UUID
+  +serviceName: String
+  +requiredFields: String
+  +minimumAmount: Decimal
+  +maximumAmount: Decimal
+  +isActive: Boolean
+}
+
+class FeeRule {
+  +feeRuleId: UUID
+  +feeType: FeeType
+  +fixedAmount: Decimal
+  +percentage: Decimal
+  +effectiveFrom: DateTime
+  +effectiveTo: DateTime
+  +calculateFee(amount): Decimal
+}
+
+class Promotion {
+  +promotionId: UUID
+  +startDate: DateTime
+  +endDate: DateTime
+  +isActive: Boolean
+}
+
+class AgentCommission {
+  +commissionId: UUID
+  +amount: Decimal
+  +status: CommissionStatus
+  +createdAt: DateTime
+}
+
+class Notification {
+  +notificationId: UUID
+  +channel: NotificationChannel
+  +message: String
+  +status: NotificationStatus
+  +retryCount: Integer
+  +createdAt: DateTime
+}
+
+class RefundRequest {
+  +refundRequestId: UUID
+  +reason: String
+  +status: RefundStatus
+  +requestedAt: DateTime
+  +approvedAt: DateTime
+}
+
+class AuditLog {
+  +auditId: UUID
+  +action: String
+  +performedBy: UUID
+  +reason: String
+  +createdAt: DateTime
+}
+
+enum VerificationLevel {
+  Basic
+  Verified
+}
+
+enum AccountStatus {
+  Active
+  Blocked
+  Disabled
+}
+
+enum PaymentStatus {
+  Initiated
+  FundsHeld
+  SentToBiller
+  Completed
+  Failed
+  Unknown
+  Rejected
+  Refunded
+}
+
+enum LedgerEntryType {
+  TopUp
+  Hold
+  Capture
+  Release
+  Refund
+  FeeIncome
+  Commission
+}
+
+enum FeeType {
+  Fixed
+  Percentage
+  Tiered
+}
+
+enum CommissionStatus {
+  Pending
+  Credited
+}
+
+enum NotificationChannel {
+  SMS
+  Push
+  Email
+}
+
+enum NotificationStatus {
+  Pending
+  Sent
+  Failed
+  Undelivered
+}
+
+enum RefundStatus {
+  Pending
+  Approved
+  Rejected
+  Processed
+}
+
+User <|-- Customer
+User <|-- Agent
+User <|-- Admin
+User <|-- SupportEmployee
+
+Customer "1" -- "1" Wallet : owns
+Agent "1" -- "1" Wallet : owns
+Wallet "1" *-- "0..*" LedgerEntry : records
+Customer "1" -- "0..*" Payment : makes
+Agent "0..1" -- "0..*" Payment : assists with
+Payment "0..*" --> "1" BillerService : pays for
+Biller "1" *-- "1..*" BillerService : offers
+Payment "0..*" --> "0..1" BillInquiry : based on
+Payment "1" -- "0..*" LedgerEntry : creates
+BillerService "1" -- "1..*" FeeRule : uses
+FeeRule "1" -- "0..*" Promotion : may have
+Payment "1" -- "0..1" AgentCommission : generates
+AgentCommission "0..*" --> "1" Agent : credited to
+Payment "1" -- "0..*" Notification : triggers
+Customer "1" -- "0..*" Notification : receives
+Payment "1" -- "0..*" RefundRequest : may have
+RefundRequest "0..*" --> "0..1" SupportEmployee : reviewed by
+User "1" -- "0..*" AuditLog : performs
+
+note right of Wallet
+  Available and held balances are derived
+  from ledger entries. Do not overwrite
+  wallet balances directly.
+end note
+
+note bottom of Payment
+  The idempotencyKey must be unique for
+  the relevant request scope. Payment
+  status follows the lifecycle in the brief.
+end note
+@enduml
